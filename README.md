@@ -94,7 +94,7 @@ The `.npz` file contains multiple arrays, each corresponding to a different traj
 
 ## 3. `trajectory_to_segmetns.py`
 
-This script takes a directory of drone trajectories and divides each trajectory into equal segments of a given length.
+This script takes a directory of drone trajectories and divides each trajectory into equal segments of a given length. Note that there are no input/output segments here. the script simply divides the trajectory into consecutive segments (think of a sequence of words in a sentence!).
 
 ### Usage
 

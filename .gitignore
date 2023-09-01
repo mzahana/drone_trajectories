@@ -1,0 +1,4 @@
+# Ignore .npz files in the main directory
+/*.npz
+# Ignore resampled directories
+resampled*/

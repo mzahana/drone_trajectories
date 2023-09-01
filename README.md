@@ -38,6 +38,17 @@ The expected file format for the trajectory files is CSV or TXT with the followi
 - `ty`: The y-coordinate of the drone at the given timestamp.
 - `tz`: The z-coordinate of the drone at the given timestamp.
 
+# Termnology
+* **Segment** Array of points in 3D, equally spaced in time.
+
+* **Input segment** A segment that precedes an output segment. Can be used as an input to a model to be trained.
+
+* `inp_seg_len` Input segment lenght. The number of points that constitute an input segment.
+
+* **Output segment** A segment that comes after another. This can be the output of a model, given the corresponding input segment`.
+
+* `out_seg_len` Input segment lenght. The number of points that constitute an output segment.
+
 # Scripts
 
 ## 1. `process_single_trajectory.py`

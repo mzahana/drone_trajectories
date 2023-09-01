@@ -1,6 +1,6 @@
 # Drone Trajectory Processing and Visualization
 
-This repository contains a collection of Python scripts for processing and visualizing drone trajectories. The scripts perform various operations such as segmenting trajectories into input and output segments, resampling trajectories, and plotting them. This is useful for traingin models for trajector prediction in 3D.
+This repository contains a collection of Python scripts for processing and visualizing drone trajectories. The scripts perform various operations such as segmenting trajectories into input and output segments, resampling trajectories, and plotting them. This is useful for training models for trajectory prediction in 3D.
 
 ![traj1](resources/Figure_1.png)
 ![traj2](resources/Figure_2.png)

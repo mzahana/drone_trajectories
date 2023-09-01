@@ -38,7 +38,7 @@ The expected file format for the trajectory files is CSV or TXT with the followi
 - `ty`: The y-coordinate of the drone at the given timestamp.
 - `tz`: The z-coordinate of the drone at the given timestamp.
 
-# Termnology
+# Terminology
 * **Segment** Array of points in 3D, equally spaced in time.
 
 * **Input segment** A segment that precedes an output segment. Can be used as an input to a model to be trained.

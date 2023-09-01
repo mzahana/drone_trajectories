@@ -5,7 +5,31 @@ This repository contains a collection of Python scripts for processing and visua
 ![traj1](resources/Figure_1.png)
 ![traj2](resources/Figure_2.png)
 
-## File Formats
+
+# Installation
+
+Before running the scripts, you need to install the required Python packages. You can install them using `pip`:
+
+```bash
+pip install numpy scipy pandas matplotlib
+```
+
+Or if you prefer using a `requirements.txt` file:
+
+```bash
+pip install -r requirements.txt
+```
+
+In this case, the `requirements.txt` file should contain:
+
+```
+numpy
+scipy
+pandas
+matplotlib
+```
+
+# File Formats
 
 The expected file format for the trajectory files is CSV or TXT with the following columns:
 

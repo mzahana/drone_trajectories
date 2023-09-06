@@ -29,7 +29,7 @@ pandas
 matplotlib
 ```
 
-# File Formats
+# Trajectory File Formats
 
 The expected file format for the trajectory files is CSV or TXT with the following columns:
 
@@ -68,14 +68,7 @@ python process_single_trajectory.py <trajectory_file> <input_segment_length> <ou
 - `output_segment_length`: Length of each output segment.
 - `--compute_velocity`: Optional flag to compute velocity segments instead of position.
 
-### `.npz` File Contents
 
-- `input_segments`: A 2D NumPy array where each column represents an input segment. Rows correspond to `tx`, `ty`, `tz` in that order.
-- `output_segments`: A 2D NumPy array where each column represents an output segment. Rows correspond to `tx`, `ty`, `tz` in that order.
-- `num_input_segments`: A scalar indicating the number of input segments.
-- `num_output_segments`: A scalar indicating the number of output segments.
-- `input_segment_length`: A scalar indicating the length of each input segment.
-- `output_segment_length`: A scalar indicating the length of each output segment.
 
 ## 2. `process_multiple_trajectories.py`
 
@@ -94,14 +87,47 @@ python process_multiple_trajectories.py <directory_path> <input_segment_length> 
 - `output_segment_length`: Length of each output segment.
 - `--compute_velocity`: Optional flag to compute velocity segments instead of position.
 
-### `.npz` File Contents
+### Content of the `.npz` file:
 
-The `.npz` file contains multiple arrays, each corresponding to a different trajectory file. The naming convention is `<filename>_input_segments` and `<filename>_output_segments`.
+1. **input_segments**:
+    - Shape: `(3, inp_seg_len, total_num_input_segments)`
+    - Description: This is a 3D array where each "slice" along the third dimension represents a segment of the input trajectory. The first dimension corresponds to the three coordinates `tx`, `ty`, and `tz`. The second dimension corresponds to the time steps in each segment.
 
-- `num_input_segments`: A dictionary mapping filenames to the number of input segments for each file.
-- `num_output_segments`: A dictionary mapping filenames to the number of output segments for each file.
-- `input_segment_length`: A scalar indicating the length of each input segment.
-- `output_segment_length`: A scalar indicating the length of each output segment.
+2. **output_segments**:
+    - Shape: `(3, out_seg_len, total_num_output_segments)`
+    - Description: Similar to `input_segments`, but for the output segments.
+
+3. **num_input_segments**:
+    - Shape: Scalar
+    - Description: Total number of input segments processed across all files.
+
+4. **num_output_segments**:
+    - Shape: Scalar
+    - Description: Total number of output segments processed across all files.
+
+5. **inp_seg_len**:
+    - Shape: Scalar
+    - Description: The length of each input segment.
+
+6. **out_seg_len**:
+    - Shape: Scalar
+    - Description: The length of each output segment.
+
+7. **knots_input_i** (for each segment i):
+    - Shape: `(inp_seg_len + k + 1,)` where `k` is the degree of the spline (3 in our case).
+    - Description: Knots of the spline representation for the i-th input segment.
+
+8. **coeffs_input_i** (for each segment i):
+    - Shape: `(inp_seg_len,)`
+    - Description: Coefficients of the spline representation for the i-th input segment.
+
+9. **knots_output_i** (for each segment i):
+    - Shape: `(out_seg_len + k + 1,)`
+    - Description: Knots of the spline representation for the i-th output segment.
+
+10. **coeffs_output_i** (for each segment i):
+    - Shape: `(out_seg_len,)`
+    - Description: Coefficients of the spline representation for the i-th output segment.
 
 ## 3. `trajectory_to_segmetns.py`
 
@@ -154,7 +180,6 @@ python plot_trajectory.py <trajectory_file> [--plot_velocity]
 
 - `trajectory_file`: Path to the CSV or TXT file containing the drone position trajectory.
 - `--plot_velocity`: Optional flag to plot velocity vectors.
-
 
 
 # Ignored Files and Directories

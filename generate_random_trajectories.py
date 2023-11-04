@@ -1,55 +1,99 @@
 """
 3D Trajectory Generator Script
 
-This script generates two types of 3D trajectory datasets: linear and circular.
-Each trajectory is saved to a separate text file with columns for timestamp, tx, ty, and tz.
-The linear trajectories have a user-defined constant velocity and optional random noise.
-The circular trajectories are defined by a constant speed and parameters for the circle (center, radius, height),
-and are now generated on a plane with a randomized normal vector, creating tilted circles.
+This script generates three types of 3D trajectories: linear, circular, and lemniscate (infinity-shaped),
+and saves them as individual `.txt` files. Each trajectory file contains a series of points with the
+fields timestamp, tx, ty, and tz, representing time and the 3D coordinates of the trajectory at that time.
+
+Trajectories are generated with user-defined parameters such as constant velocities for linear trajectories
+and varying circle center points, radii, heights, and speeds for circular trajectories. The lemniscate
+trajectories are generated with random scales and tilted in 3D space according to a random normal vector.
 
 Usage:
-  python generate_trajectories.py <output_directory> [--dt <time_step>]
+    python generate_random_trajectories.py <output_directory> [--dt <time_step>] [--noise <noise_level>]
 
 Arguments:
-  output_directory: The directory where the trajectory files will be saved.
-  --dt:             Optional. Time step in seconds for the trajectory points. Default is 0.1 seconds.
+    output_directory: Mandatory. The directory where the trajectory files will be saved.
+                      The script will create the directory if it does not exist.
+    --dt:            Optional. The time delta between each point in the trajectory. Default is 0.1 seconds.
+    --noise:         Optional. The level of Gaussian noise to apply to the trajectory points. Default is 0.01.
+
+Each generated trajectory point includes a small amount of Gaussian noise to simulate real-world data
+inaccuracies. Users can specify the noise level to adjust the variance of the added noise.
 
 Example:
-  python generate_trajectories.py ./trajectories --dt 0.05
+    python generate_random_trajectories.py ./trajectories --dt 0.1 --noise 0.02
 
-This will generate the trajectories and save them in the './trajectories' directory with a time step of 0.05 seconds.
+This will generate the trajectory files in the `./trajectories` directory, with a time step of 0.1 seconds
+and a noise level of 0.02 on the trajectory points.
 
+The script will automatically generate 100 files for each trajectory type with randomized parameters.
+The files are named `line_<i>.txt` for linear trajectories, `circle_<i>.txt` for circular trajectories,
+and `lemniscate_<i>.txt` for lemniscate trajectories, where `<i>` is the index of the file starting from 1.
 """
 
 import os
 import numpy as np
 import argparse
 
-# Set up the argument parser
-parser = argparse.ArgumentParser(description="Generate 3D trajectory datasets with linear and tilted circular trajectories.")
-parser.add_argument("path", help="Directory where the trajectory files will be saved.", type=str)
-parser.add_argument("--dt", help="Time step in seconds for the trajectory points. Default is 0.1 sec.", type=float, default=0.1)
-args = parser.parse_args()
+# Function to add Gaussian noise to a point
+def add_noise(point, noise_level):
+    return point + np.random.normal(0, noise_level, size=point.shape)
 
-# Directory where the files will be saved
-output_path = args.path
-dt = args.dt  # Time step in seconds
+# Function to generate a linear trajectory with noise
+def linear_trajectory(velocity, duration, dt, noise_level=0.01):
+    timestamps = np.arange(0, duration, dt)
+    data = []
+    for t in timestamps:
+        point = np.array([velocity[0] * t, velocity[1] * t, velocity[2] * t])
+        noisy_point = add_noise(point, noise_level)
+        data.append([t, *noisy_point])
+    return data
 
-# Ensure the directory exists
-if not os.path.exists(output_path):
-    os.makedirs(output_path)
+# Function to generate a circular trajectory with noise
+def circular_trajectory(center, radius, height, speed, normal, duration, dt, noise_level=0.01):
+    timestamps = np.arange(0, duration, dt)
+    data = []
+    rot_matrix = rotation_matrix_from_vectors(np.array([0, 0, 1]), np.array(normal))
+    for t in timestamps:
+        angle = speed * t
+        x = center[0] + radius * np.cos(angle)
+        y = center[1] + radius * np.sin(angle)
+        z = center[2] + height
+        point = np.array([x, y, z])
+        rotated_point = rot_matrix.dot(point)
+        noisy_point = add_noise(rotated_point, noise_level)
+        data.append([t, *noisy_point])
+    return data
 
-def save_to_txt(filename, data):
-    """Save data to a .txt file in the given directory."""
-    complete_path = os.path.join(output_path, filename)
-    with open(complete_path, 'w') as f:
+# Function to generate a lemniscate (infinity-shaped) trajectory with noise
+def lemniscate_trajectory(scale, speed, normal, duration, dt, noise_level=0.01):
+    timestamps = np.arange(0, duration, dt)
+    data = []
+    rot_matrix = rotation_matrix_from_vectors(np.array([0, 0, 1]), np.array(normal))
+    for t in timestamps:
+        theta = speed * t
+        x = (scale * np.cos(theta)) / (1 + np.sin(theta)**2)
+        y = (scale * np.cos(theta) * np.sin(theta)) / (1 + np.sin(theta)**2)
+        z = 0  # Lemniscate is initially in the XY plane
+        point = np.array([x, y, z])
+        rotated_point = rot_matrix.dot(point)
+        noisy_point = add_noise(rotated_point, noise_level)
+        data.append([t, *noisy_point])
+    return data
+
+# Helper function to save the trajectory to a text file with header
+def save_to_txt(filename, trajectory):
+    with open(filename, 'w') as f:
+        # Write the header
         f.write("timestamp,tx,ty,tz\n")
-        for line in data:
-            f.write(",".join(str(x) for x in line) + "\n")
+        # Write the trajectory points
+        for point in trajectory:
+            f.write(f"{point[0]:.2f}, {point[1]:.5f}, {point[2]:.5f}, {point[3]:.5f}\n")
 
+# Function to generate a rotation matrix from two vectors
 def rotation_matrix_from_vectors(vec1, vec2):
-    """Find the rotation matrix that aligns vec1 to vec2"""
-    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+    a, b = vec1 / np.linalg.norm(vec1), vec2 / np.linalg.norm(vec2)
     v = np.cross(a, b)
     c = np.dot(a, b)
     s = np.linalg.norm(v)
@@ -57,83 +101,55 @@ def rotation_matrix_from_vectors(vec1, vec2):
     rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
     return rotation_matrix
 
-def circular_trajectory(center, radius, height, speed, normal, duration):
-    """Generate a tilted circular trajectory."""
-    timestamps = np.arange(0, duration, dt)
-    data = []
-    angular_speed = speed / radius
-    # Create rotation matrix to tilt the circle
-    rot_matrix = rotation_matrix_from_vectors(np.array([0,0,1]), np.array(normal))
-    for t in timestamps:
-        theta = angular_speed * t
-        x, y, z = radius * np.cos(theta), radius * np.sin(theta), height
-        # Apply rotation to the circle points
-        rotated_point = rot_matrix.dot(np.array([x, y, z]))
-        tx, ty, tz = rotated_point + center
-        data.append([t, tx, ty, tz])
-    return data
+# Parse arguments
+parser = argparse.ArgumentParser(description="Generate 3D trajectory datasets.")
+parser.add_argument("path", help="Output directory for trajectory files.", type=str)
+parser.add_argument("--dt", help="Time delta for samples in trajectory.", type=float, default=0.1)
+parser.add_argument("--noise", help="Noise level for the trajectory points.", type=float, default=0.01)
+args = parser.parse_args()
 
-def linear_trajectory(velocity, duration, noise=0):
-    """Generate a linear trajectory."""
-    timestamps = np.arange(0, duration, dt)
-    data = []
-    for t in timestamps:
-        tx = velocity[0] * t + np.random.uniform(-noise, noise)
-        ty = velocity[1] * t + np.random.uniform(-noise, noise)
-        tz = velocity[2] * t + np.random.uniform(-noise, noise)
-        data.append([t, tx, ty, tz])
-    return data
+# Ensure the output directory exists
+output_path = args.path
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
 
-def lemniscate_trajectory(scale, speed, normal, duration):
-    """Generate a tilted lemniscate (infinity-shaped) trajectory."""
-    timestamps = np.arange(0, duration, dt)
-    data = []
-    # Create rotation matrix to tilt the lemniscate
-    rot_matrix = rotation_matrix_from_vectors(np.array([0, 0, 1]), np.array(normal))
-    for t in timestamps:
-        theta = speed * t
-        x = (scale * np.cos(theta)) / (1 + np.sin(theta)**2)
-        y = (scale * np.cos(theta) * np.sin(theta)) / (1 + np.sin(theta)**2)
-        z = 0  # Lemniscate is initially in the XY plane
-        # Apply rotation to the lemniscate points
-        rotated_point = rot_matrix.dot(np.array([x, y, z]))
-        data.append([t, *rotated_point])
-    return data
+# Generate a set of velocities for the linear trajectories
+velocities = [tuple(np.random.uniform(-1, 1, size=3)) for _ in range(100)]
 
-# Generate random velocities and circle parameters with random normal vectors
-velocities = [tuple(np.random.uniform(-5, 5, 3)) for _ in range(100)]
+
+# Generate the linear trajectories
+for i, velocity in enumerate(velocities, 1):
+    traj_data = linear_trajectory(velocity, 10, args.dt, args.noise)
+    save_to_txt(os.path.join(output_path, f'line_{i}.txt'), traj_data)
+
+# Generate circle parameters
 circle_parameters = [(
-    tuple(np.random.uniform(-10, 10, 3)),  # Center
-    np.random.uniform(1, 10),  # Radius
-    np.random.uniform(-5, 5),  # Height
-    np.random.uniform(0.1, 5),  # Speed
-    tuple(np.random.normal(0, 1, 3))  # Normal vector
+    np.random.uniform(-10, 10, size=3),  # Center
+    np.random.uniform(1, 5),             # Radius
+    np.random.uniform(0.1, 2),           # Speed
+    np.random.normal(0, 1, 3)            # Normal vector, directly as np.array
 ) for _ in range(100)]
 
-# Generate random lemniscate parameters with random normal vectors
-lemniscate_parameters = [(
-    np.random.uniform(1, 5),  # Scale
-    np.random.uniform(0.1, 2),  # Speed
-    tuple(np.random.normal(0, 1, 3))  # Normal vector
-) for _ in range(100)]
-
-# Save linear trajectories
-for i, v in enumerate(velocities):
-    trajectory = linear_trajectory(v, 10)  # Duration of 10 seconds
-    save_to_txt(f"line_{i+1}.txt", trajectory)
-
-# Save circular trajectories with tilt
-for i, params in enumerate(circle_parameters):
-    center, radius, height, speed, normal = params
+# Generate circular trajectories with tilt and noise
+for i, (center, radius, speed, normal) in enumerate(circle_parameters, 1):
+    normal = normal / np.linalg.norm(normal)  # Normalize the normal vector
     duration = 2 * np.pi * radius / speed  # Duration to complete one circle
-    trajectory = circular_trajectory(center, radius, height, speed, normal, duration)
-    save_to_txt(f"circle_{i+1}.txt", trajectory)
+    traj_data = circular_trajectory(center, radius, 0, speed, normal, duration, args.dt, args.noise)
+    save_to_txt(os.path.join(output_path, f'circle_{i}.txt'), traj_data)
 
-# Save lemniscate trajectories with tilt
-for i, params in enumerate(lemniscate_parameters):
+# Generate lemniscate parameters
+lemniscate_parameters = [(
+    np.random.uniform(0.5, 2.0),         # Scale
+    np.random.uniform(0.1, 2),           # Speed
+    tuple(np.random.normal(0, 1, 3)) # Normal vector
+) for _ in range(100)]
+
+# Generate lemniscate trajectories with tilt and noise
+for i, params in enumerate(lemniscate_parameters, 1):
     scale, speed, normal = params
+    normal = normal / np.linalg.norm(normal)  # Normalize the normal vector
     duration = 10  # Duration can be arbitrary; adjust as needed
-    trajectory = lemniscate_trajectory(scale, speed, normal, duration)
-    save_to_txt(f"lemniscate_{i+1}.txt", trajectory)
+    traj_data = lemniscate_trajectory(scale, speed, normal, duration, args.dt, args.noise)
+    save_to_txt(os.path.join(output_path, f'lemniscate_{i}.txt'), traj_data)
 
 print("Trajectories generated at", output_path)

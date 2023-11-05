@@ -17,12 +17,13 @@ Arguments:
                       The script will create the directory if it does not exist.
     --dt:            Optional. The time delta between each point in the trajectory. Default is 0.1 seconds.
     --noise:         Optional. The level of Gaussian noise to apply to the trajectory points. Default is 0.01.
+    --ntraj:         Optional. The number of random trajectories for each trajectory type. Default is 100.
 
 Each generated trajectory point includes a small amount of Gaussian noise to simulate real-world data
 inaccuracies. Users can specify the noise level to adjust the variance of the added noise.
 
 Example:
-    python generate_random_trajectories.py ./trajectories --dt 0.1 --noise 0.02
+    python generate_random_trajectories.py ./trajectories --dt 0.1 --noise 0.02 --ntraj 1000
 
 This will generate the trajectory files in the `./trajectories` directory, with a time step of 0.1 seconds
 and a noise level of 0.02 on the trajectory points.

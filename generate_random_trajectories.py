@@ -106,6 +106,7 @@ parser = argparse.ArgumentParser(description="Generate 3D trajectory datasets.")
 parser.add_argument("path", help="Output directory for trajectory files.", type=str)
 parser.add_argument("--dt", help="Time delta for samples in trajectory.", type=float, default=0.1)
 parser.add_argument("--noise", help="Noise level for the trajectory points.", type=float, default=0.01)
+parser.add_argument("--ntraj", help="Number of random trajectories for each trajectory type", type=int, default=100)
 args = parser.parse_args()
 
 # Ensure the output directory exists
@@ -114,7 +115,7 @@ if not os.path.exists(output_path):
     os.makedirs(output_path)
 
 # Generate a set of velocities for the linear trajectories
-velocities = [tuple(np.random.uniform(-1, 1, size=3)) for _ in range(100)]
+velocities = [tuple(np.random.uniform(-1, 1, size=3)) for _ in range(args.ntraj)]
 
 
 # Generate the linear trajectories
@@ -128,7 +129,7 @@ circle_parameters = [(
     np.random.uniform(1, 5),             # Radius
     np.random.uniform(0.1, 2),           # Speed
     np.random.normal(0, 1, 3)            # Normal vector, directly as np.array
-) for _ in range(100)]
+) for _ in range(args.ntraj)]
 
 # Generate circular trajectories with tilt and noise
 for i, (center, radius, speed, normal) in enumerate(circle_parameters, 1):
@@ -142,7 +143,7 @@ lemniscate_parameters = [(
     np.random.uniform(0.5, 2.0),         # Scale
     np.random.uniform(0.1, 2),           # Speed
     tuple(np.random.normal(0, 1, 3)) # Normal vector
-) for _ in range(100)]
+) for _ in range(args.ntraj)]
 
 # Generate lemniscate trajectories with tilt and noise
 for i, params in enumerate(lemniscate_parameters, 1):

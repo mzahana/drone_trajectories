@@ -71,7 +71,7 @@ def plot_trajectory(df, title, plot_velocity=False):
 
                    df_combined['vx'], df_combined['vy'], df_combined['vz'],
 
-                   color='r', length=0.1, normalize=True, label='Velocity')
+                   color='r', length=0.1, normalize=False, label='Velocity')
 
         
 

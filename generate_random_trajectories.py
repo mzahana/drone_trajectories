@@ -64,8 +64,8 @@ def generate_speed(min_speed, max_speed):
         np.random.uniform(min_speed, max_speed)
     elif min_speed < 0 and max_speed > 0:
         speed = np.random.choice([
-            np.random.uniform(min_speed, -0.5),  # Exclude values very close to zero
-            np.random.uniform(0.5, max_speed)     # Exclude values very close to zero
+            np.random.uniform(min_speed, -2.0),  # Exclude values very close to zero
+            np.random.uniform(2.0, max_speed)     # Exclude values very close to zero
         ])
         return speed
 
@@ -81,6 +81,9 @@ def circular_trajectory(center, radius, height, tangential_speed, normal, durati
     timestamps = np.linspace(0, duration, num_points)
     data = []
     rot_matrix = rotation_matrix_from_vectors(np.array([0, 0, 1]), np.array(normal))
+    if radius < 1.0:
+        print(f"radius {radius} < 1.0. Setting it to 1.0")
+        radius = 1.0
     angular_speed = tangential_speed / radius  # Calculate angular speed from tangential speed and radius
     
     for t in timestamps:
@@ -195,25 +198,30 @@ if not os.path.exists(output_path):
 
 min_speed = -15 # m/s
 max_speed = 15
-min_omega = -math.radians(100)
+min_omega = -math.radians(100) # for the lemnscate (infinity) shape
 max_omega = math.radians(100) # rad/s
-duration = 20.0; # secnods
+duration = 5.0; # seconds
 
 # Generate a set of velocities for the linear trajectories
 line_parameters = [(
-    tuple(np.random.uniform(-100, 100, size=3)),            # initial_points, meters
+    ([np.random.uniform(-50, 50, size=1).tolist()[0], np.random.uniform(-50, 50, size=1).tolist()[0], np.random.uniform(0, 50, size=1).tolist()[0]]),            # initial_points, meters
     tuple(np.random.uniform(min_speed, max_speed, size=3))  # velocities, m/s
 ) for _ in range(args.ntraj)]
 
 # Generate the linear trajectories
 for i, (initial_point, velocity) in enumerate(line_parameters, 1):
+    vel_np = np.array(velocity)
+    vel_mag = np.linalg.norm(vel_np)
+    if vel_mag < 2.0:
+        print(f"Velocity magnitude {vel_mag} < 2.0  ignore...")
+        continue
     traj_data = linear_trajectory(initial_point, velocity, duration, args.dt, args.noise)
     save_to_txt(os.path.join(output_path, f'line_{i}.txt'), traj_data, args.npoints)
 
 # Generate circle parameters
 circle_parameters = [(
-    np.random.uniform(-50, 50, size=3),  # Center
-    np.random.uniform(1, 15),         # Radius
+    np.array([np.random.uniform(-50, 50, size=1).tolist()[0], np.random.uniform(-50, 50, size=1).tolist()[0], np.random.uniform(0, 50, size=1).tolist()[0]]),  # Center
+    np.random.uniform(1, 10),         # Radius
     generate_speed(min_speed, max_speed),                    # Speed, avoiding zero
     tuple(generate_normal_vector())            # Normal vector, directly as np.array
 ) for _ in range(args.ntraj)]
@@ -221,22 +229,22 @@ circle_parameters = [(
 # Generate circular trajectories with tilt and noise
 for i, (center, radius, speed, normal) in enumerate(circle_parameters, 1):
     normal = normal / np.linalg.norm(normal)  # Normalize the normal vector
-    # duration = 2 * np.pi * radius / abs(speed)  # Duration to complete one circle
+    duration = 2 * np.pi * radius / abs(speed)  # Duration to complete one circle
     traj_data = circular_trajectory(center, radius, 0, speed, normal, duration, args.dt, args.noise)
     save_to_txt(os.path.join(output_path, f'circle_{i}.txt'), traj_data, args.npoints)
 
-# Generate lemniscate parameters
-lemniscate_parameters = [(
-    np.random.uniform(1.0, 30.0),         # Scale
-    np.random.uniform(min_omega, max_omega),           # Speed
-    tuple(generate_normal_vector()) # Normal vector
-) for _ in range(args.ntraj)]
+# # Generate lemniscate parameters
+# lemniscate_parameters = [(
+#     np.random.uniform(1.0, 30.0),         # Scale
+#     np.random.uniform(min_omega, max_omega),           # Speed
+#     tuple(generate_normal_vector()) # Normal vector
+# ) for _ in range(args.ntraj)]
 
-# Generate lemniscate trajectories with tilt and noise
-for i, params in enumerate(lemniscate_parameters, 1):
-    scale, speed, normal = params
-    normal = normal / np.linalg.norm(normal)  # Normalize the normal vector
-    traj_data = lemniscate_trajectory(scale, speed, normal, duration, args.dt, args.noise)
-    save_to_txt(os.path.join(output_path, f'lemniscate_{i}.txt'), traj_data, args.npoints)
+# # Generate lemniscate trajectories with tilt and noise
+# for i, params in enumerate(lemniscate_parameters, 1):
+#     scale, speed, normal = params
+#     normal = normal / np.linalg.norm(normal)  # Normalize the normal vector
+#     traj_data = lemniscate_trajectory(scale, speed, normal, duration, args.dt, args.noise)
+#     save_to_txt(os.path.join(output_path, f'lemniscate_{i}.txt'), traj_data, args.npoints)
 
 print("Trajectories generated at", output_path)

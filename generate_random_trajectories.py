@@ -162,9 +162,9 @@ def save_to_txt(filename, trajectory, npoints=100):
     if len(trajectory)==0:
         print(f"No trajectory data to write for {filename}.")
     
-    # if len(trajectory) < npoints:
-    #     print(f"len(trajectory) < {npoints}. Not saving it.")
-    #     return
+    if len(trajectory) < npoints:
+        print(f"len(trajectory) < {npoints}. Not saving it.")
+        return
     with open(filename, 'w') as f:
         # Write the header
         f.write("timestamp,tx,ty,tz\n")

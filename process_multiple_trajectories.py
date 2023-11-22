@@ -30,15 +30,11 @@ def process_trajectory(df, inp_seg_len, out_seg_len, compute_velocity=False):
         
         # Compute spline representation for the input segment
         tck_x_input = splrep(np.arange(inp_seg_len), input_segment[0], k=3)
-        tck_y_input = splrep(np.arange(inp_seg_len), input_segment[1], k=3)
-        tck_z_input = splrep(np.arange(inp_seg_len), input_segment[2], k=3)
         knots_input.append(tck_x_input[0])
         coeffs_input.append(tck_x_input[1])
         
         # Compute spline representation for the output segment
         tck_x_output = splrep(np.arange(out_seg_len), output_segment[0], k=3)
-        tck_y_output = splrep(np.arange(out_seg_len), output_segment[1], k=3)
-        tck_z_output = splrep(np.arange(out_seg_len), output_segment[2], k=3)
         knots_output.append(tck_x_output[0])
         coeffs_output.append(tck_x_output[1])
         
@@ -105,9 +101,11 @@ if __name__ == "__main__":
     for i in range(num_input_segments):
         npz_data[f'knots_input_{i}'] = all_knots_input[i]
         npz_data[f'coeffs_input_{i}'] = all_coeffs_input[i]
+        npz_data[f'spline_data_input_{i}'] = np.concatenate([all_knots_input[i], all_coeffs_input[i]])
         
     for i in range(num_output_segments):
         npz_data[f'knots_output_{i}'] = all_knots_output[i]
         npz_data[f'coeffs_output_{i}'] = all_coeffs_output[i]
+        npz_data[f'spline_data_output_{i}'] = np.concatenate([all_knots_output[i], all_coeffs_output[i]])
     
     np.savez(save_path, **npz_data)

@@ -7,8 +7,13 @@ Each file should contain timestamp, tx, ty, and tz columns, representing time an
 calculates the velocity components (vx, vy, vz) and their magnitudes, and then computes
 the mean and standard deviation of the velocity magnitudes.
 
-The results are saved in two .npz files: pos_stats.npz and vel_stats.npz.
-It also generates histograms for the positions and velocity magnitudes.
+Additionally, it computes and prints the maximum length of all position vectors and
+the maximum velocity magnitudes from all trajectory files. These values are also saved
+in the respective .npz files.
+
+The results, including position and velocity statistics, are saved in two .npz files:
+pos_stats.npz and vel_stats.npz. It also generates histograms for the positions and
+velocity magnitudes.
 
 Usage:
     python compute_stats.py <directory_path>
@@ -42,17 +47,22 @@ def process_file(filename):
 
     return df
 
-
-
 def compute_stats_and_plot(directory):
     all_files = glob.glob(os.path.join(directory, "*.csv")) + glob.glob(os.path.join(directory, "*.txt"))
     position_data = []
     velocity_data = []
 
+    max_pos_length = 0
+    max_vel_magnitude = 0
+
     for filename in all_files:
         df = process_file(filename)
         position_data.append(df[['tx', 'ty', 'tz']])
         velocity_data.append(df[['vel_magnitude']])
+
+        # Update maximum position vector length and velocity magnitude
+        max_pos_length = max(max_pos_length, np.max(np.sqrt(df['tx']**2 + df['ty']**2 + df['tz']**2)))
+        max_vel_magnitude = max(max_vel_magnitude, df['vel_magnitude'].max())
 
     if not position_data or not velocity_data:
         print("No CSV/TXT files found or files are empty.")
@@ -66,7 +76,8 @@ def compute_stats_and_plot(directory):
         "input_mean": combined_pos_df.mean().tolist(),
         "input_std": combined_pos_df.std().tolist(),
         "target_mean": combined_pos_df.mean().tolist(),
-        "target_std": combined_pos_df.std().tolist()
+        "target_std": combined_pos_df.std().tolist(),
+        "max_length": max_pos_length
     }
 
     # Compute Velocity Stats
@@ -74,7 +85,8 @@ def compute_stats_and_plot(directory):
         "input_mean": [combined_vel_df['vel_magnitude'].mean()] * 3,
         "input_std": [combined_vel_df['vel_magnitude'].std()] * 3,
         "target_mean": [combined_vel_df['vel_magnitude'].mean()] * 3,
-        "target_std": [combined_vel_df['vel_magnitude'].std()] * 3
+        "target_std": [combined_vel_df['vel_magnitude'].std()] * 3,
+        "max_velocity": max_vel_magnitude
     }
 
     # Save the Statistics
@@ -83,14 +95,16 @@ def compute_stats_and_plot(directory):
     np.savez(pos_stats_file, **pos_stats)
     np.savez(vel_stats_file, **vel_stats)
 
-    # Print file save locations and the Statistics
+    # Print file save locations, the Statistics, and maximum values
     print(f"Files saved: {os.path.abspath(pos_stats_file)} and {os.path.abspath(vel_stats_file)}")
     print("\nPosition Statistics:")
     print("Mean:", pos_stats["input_mean"])
     print("Standard Deviation:", pos_stats["input_std"])
+    print("Maximum Position Vector Length:", max_pos_length)
     print("\nVelocity Magnitude Statistics:")
     print("Mean:", vel_stats["input_mean"])
     print("Standard Deviation:", vel_stats["input_std"])
+    print("Maximum Velocity Magnitude:", max_vel_magnitude)
 
     # Plot histograms
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
@@ -112,7 +126,7 @@ def compute_stats_and_plot(directory):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python script.py <directory_path>")
+        print("Usage: python compute_stats.py <directory_path>")
     else:
         directory_path = sys.argv[1]
         compute_stats_and_plot(directory_path)

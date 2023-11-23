@@ -11,9 +11,12 @@ Additionally, it computes and prints the maximum length of all position vectors 
 the maximum velocity magnitudes from all trajectory files. These values are also saved
 in the respective .npz files.
 
-The results, including position and velocity statistics, are saved in two .npz files:
-pos_stats.npz and vel_stats.npz. It also generates histograms for the positions and
-velocity magnitudes.
+The script also computes, saves, and prints the covariance matrices and their inverses
+for both position and velocity datasets, and performs a whitening transformation on the data.
+
+The results, including position and velocity statistics and covariance matrices, are saved 
+in two .npz files: pos_stats.npz and vel_stats.npz. It also generates histograms for the positions 
+and velocity magnitudes.
 
 Usage:
     python compute_stats.py <directory_path>
@@ -31,23 +34,32 @@ import glob
 import sys
 import matplotlib.pyplot as plt
 
-def process_file(filename):
+def process_file(filename, pos_mean, pos_L, vel_mean, vel_L, save_dir):
     df = pd.read_csv(filename)
 
     # Calculate differences for velocities and handle NaN values
     df['vx'] = df['tx'].diff() / df['timestamp'].diff()
     df['vy'] = df['ty'].diff() / df['timestamp'].diff()
     df['vz'] = df['tz'].diff() / df['timestamp'].diff()
-
-    # Drop the first row where the velocities are NaN due to diff
     df.dropna(subset=['vx', 'vy', 'vz'], inplace=True)
 
-    # Compute velocity magnitude
+    # Calculate velocity magnitude
     df['vel_magnitude'] = np.sqrt(df['vx']**2 + df['vy']**2 + df['vz']**2)
 
-    return df
+    # Whitening transformations
+    pos_data = df[['tx', 'ty', 'tz']].values
+    pos_centered = pos_data - pos_mean
+    df[['tx', 'ty', 'tz']] = np.dot(pos_L, pos_centered.T).T
 
-def compute_stats_and_plot(directory):
+    vel_data = df[['vx', 'vy', 'vz']].values
+    vel_centered = vel_data - vel_mean
+    df[['vx', 'vy', 'vz']] = np.dot(vel_L, vel_centered.T).T
+
+    # Save the transformed data
+    transformed_filename = os.path.join(save_dir, 'transformed_' + os.path.basename(filename))
+    df.to_csv(transformed_filename, index=False)
+
+def compute_stats_and_transform(directory):
     all_files = glob.glob(os.path.join(directory, "*.csv")) + glob.glob(os.path.join(directory, "*.txt"))
     position_data = []
     velocity_data = []
@@ -56,9 +68,17 @@ def compute_stats_and_plot(directory):
     max_vel_magnitude = 0
 
     for filename in all_files:
-        df = process_file(filename)
+        df = pd.read_csv(filename)
+        df['vx'] = df['tx'].diff() / df['timestamp'].diff()
+        df['vy'] = df['ty'].diff() / df['timestamp'].diff()
+        df['vz'] = df['tz'].diff() / df['timestamp'].diff()
+        df.dropna(subset=['vx', 'vy', 'vz'], inplace=True)
+
+        # Calculate velocity magnitude
+        df['vel_magnitude'] = np.sqrt(df['vx']**2 + df['vy']**2 + df['vz']**2)
+
         position_data.append(df[['tx', 'ty', 'tz']])
-        velocity_data.append(df[['vel_magnitude']])
+        velocity_data.append(df[['vx', 'vy', 'vz', 'vel_magnitude']])
 
         # Update maximum position vector length and velocity magnitude
         max_pos_length = max(max_pos_length, np.max(np.sqrt(df['tx']**2 + df['ty']**2 + df['tz']**2)))
@@ -71,54 +91,73 @@ def compute_stats_and_plot(directory):
     combined_pos_df = pd.concat(position_data, ignore_index=True)
     combined_vel_df = pd.concat(velocity_data, ignore_index=True)
 
-    # Compute Position Stats
-    pos_stats = {
-        "input_mean": combined_pos_df.mean().tolist(),
-        "input_std": combined_pos_df.std().tolist(),
-        "target_mean": combined_pos_df.mean().tolist(),
-        "target_std": combined_pos_df.std().tolist(),
-        "max_length": max_pos_length
-    }
+    # Compute statistics and Cholesky decomposition
+    pos_stats, vel_stats = compute_stats(combined_pos_df, combined_vel_df, max_pos_length, max_vel_magnitude)
 
-    # Compute Velocity Stats
-    vel_stats = {
-        "input_mean": [combined_vel_df['vel_magnitude'].mean()] * 3,
-        "input_std": [combined_vel_df['vel_magnitude'].std()] * 3,
-        "target_mean": [combined_vel_df['vel_magnitude'].mean()] * 3,
-        "target_std": [combined_vel_df['vel_magnitude'].std()] * 3,
-        "max_velocity": max_vel_magnitude
-    }
-
-    # Save the Statistics
+    # Save the statistics
     pos_stats_file = 'pos_stats.npz'
     vel_stats_file = 'vel_stats.npz'
     np.savez(pos_stats_file, **pos_stats)
     np.savez(vel_stats_file, **vel_stats)
 
-    # Print file save locations, the Statistics, and maximum values
-    print(f"Files saved: {os.path.abspath(pos_stats_file)} and {os.path.abspath(vel_stats_file)}")
-    print("\nPosition Statistics:")
-    print("Mean:", pos_stats["input_mean"])
-    print("Standard Deviation:", pos_stats["input_std"])
-    print("Maximum Position Vector Length:", max_pos_length)
-    print("\nVelocity Magnitude Statistics:")
-    print("Mean:", vel_stats["input_mean"])
-    print("Standard Deviation:", vel_stats["input_std"])
-    print("Maximum Velocity Magnitude:", max_vel_magnitude)
+    # Print and save statistics
+    print_and_save_stats(pos_stats_file, vel_stats_file, pos_stats, vel_stats)
 
-    # Plot histograms
+    # Create a directory for transformed data
+    parent_dir = os.path.dirname(directory)
+    transformed_dir = os.path.join(parent_dir, 'transformed_data')
+    os.makedirs(transformed_dir, exist_ok=True)
+
+    # Process each file to transform and save data
+    for filename in all_files:
+        process_file(filename, pos_stats['input_mean'], pos_stats['L_matrix'], 
+                     vel_stats['input_mean'], vel_stats['L_matrix'], transformed_dir)
+
+    # Plot histograms of the transformed data
+    plot_histograms(combined_pos_df, combined_vel_df)
+
+def compute_stats(pos_df, vel_df, max_pos_length, max_vel_magnitude):
+    # Exclude 'vel_magnitude' from velocity statistics
+    vel_components_df = vel_df[['vx', 'vy', 'vz']]
+
+    pos_stats = {
+        "input_mean": pos_df.mean().tolist(),
+        "input_std": pos_df.std().tolist(),
+        "cov_matrix": pos_df.cov().values,
+        "L_matrix": np.linalg.cholesky(np.linalg.inv(pos_df.cov())).tolist(),
+        "max_length": max_pos_length
+    }
+    vel_stats = {
+        "input_mean": vel_components_df.mean().tolist(),
+        "input_std": vel_components_df.std().tolist(),
+        "cov_matrix": vel_components_df.cov().values,
+        "L_matrix": np.linalg.cholesky(np.linalg.inv(vel_components_df.cov())).tolist(),
+        "max_velocity": max_vel_magnitude
+    }
+    return pos_stats, vel_stats
+
+def print_and_save_stats(pos_file, vel_file, pos_stats, vel_stats):
+    print(f"Files saved: {os.path.abspath(pos_file)} and {os.path.abspath(vel_file)}")
+    print("\nPosition Statistics:")
+    for key, value in pos_stats.items():
+        print(f"{key}: {value}")
+    print("\nVelocity Statistics:")
+    for key, value in vel_stats.items():
+        print(f"{key}: {value}")
+
+def plot_histograms(pos_df, vel_df):
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
-    axs[0, 0].hist(combined_pos_df['tx'].dropna(), bins=30, color='blue', alpha=0.7)
+    axs[0, 0].hist(pos_df['tx'], bins=30, color='blue', alpha=0.7)
     axs[0, 0].set_title('Histogram of tx')
 
-    axs[0, 1].hist(combined_pos_df['ty'].dropna(), bins=30, color='green', alpha=0.7)
+    axs[0, 1].hist(pos_df['ty'], bins=30, color='green', alpha=0.7)
     axs[0, 1].set_title('Histogram of ty')
 
-    axs[1, 0].hist(combined_pos_df['tz'].dropna(), bins=30, color='red', alpha=0.7)
+    axs[1, 0].hist(pos_df['tz'], bins=30, color='red', alpha=0.7)
     axs[1, 0].set_title('Histogram of tz')
 
-    axs[1, 1].hist(combined_vel_df['vel_magnitude'].dropna(), bins=30, color='purple', alpha=0.7)
+    axs[1, 1].hist(vel_df['vel_magnitude'], bins=30, color='purple', alpha=0.7)
     axs[1, 1].set_title('Histogram of Velocity Magnitude')
 
     plt.tight_layout()
@@ -129,4 +168,4 @@ if __name__ == "__main__":
         print("Usage: python compute_stats.py <directory_path>")
     else:
         directory_path = sys.argv[1]
-        compute_stats_and_plot(directory_path)
+        compute_stats_and_transform(directory_path)

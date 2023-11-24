@@ -8,7 +8,7 @@ def read_trajectory(file_path):
     df = pd.read_csv(file_path)
     return df
 
-def process_trajectory(df, inp_seg_len, out_seg_len, compute_velocity=False):
+def process_trajectory(df, inp_seg_len, out_seg_len, compute_velocity=False, precomputed_velocity=False):
     input_segments = []
     output_segments = []
     knots_input = []
@@ -16,14 +16,18 @@ def process_trajectory(df, inp_seg_len, out_seg_len, compute_velocity=False):
     knots_output = []
     coeffs_output = []
     
-    if compute_velocity:
+    if compute_velocity and not precomputed_velocity:
         # Compute velocity (difference in position / difference in time)
         df_velocity = df[['tx', 'ty', 'tz']].diff() / df['timestamp'].diff().values[:, None]
         df = df_velocity.dropna()
     
     for i in range(0, len(df) - inp_seg_len - out_seg_len + 1):
-        input_segment = df.iloc[i:i+inp_seg_len][['tx', 'ty', 'tz']].values.T
-        output_segment = df.iloc[i+inp_seg_len:i+inp_seg_len+out_seg_len][['tx', 'ty', 'tz']].values.T
+        if precomputed_velocity:
+            input_segment = df.iloc[i:i+inp_seg_len][['vx', 'vy', 'vz']].values.T
+            output_segment = df.iloc[i+inp_seg_len:i+inp_seg_len+out_seg_len][['vx', 'vy', 'vz']].values.T
+        else:
+            input_segment = df.iloc[i:i+inp_seg_len][['tx', 'ty', 'tz']].values.T
+            output_segment = df.iloc[i+inp_seg_len:i+inp_seg_len+out_seg_len][['tx', 'ty', 'tz']].values.T
         
         input_segments.append(input_segment)
         output_segments.append(output_segment)
@@ -45,10 +49,11 @@ def process_trajectory(df, inp_seg_len, out_seg_len, compute_velocity=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process drone trajectory data.')
-    parser.add_argument('dir_path', type=str, help='Path to the directory containing the drone position trajectory files')
+    parser.add_argument('dir_path', type=str, help='Path to the directory containing the drone trajectory files')
     parser.add_argument('inp_seg_len', type=int, help='Length of input segments')
     parser.add_argument('out_seg_len', type=int, help='Length of output segments')
     parser.add_argument('--compute_velocity', action='store_true', help='Compute velocity trajectory instead of position')
+    parser.add_argument('--precomputed_velocity', action='store_true', help='Use precomputed velocity instead of computing it')
     parser.add_argument('--save_path', type=str, default='segments.npz', help='Path to save the .npz file')
     
     args = parser.parse_args()
@@ -57,6 +62,7 @@ if __name__ == "__main__":
     inp_seg_len = args.inp_seg_len
     out_seg_len = args.out_seg_len
     compute_velocity = args.compute_velocity
+    precomputed_velocity = args.precomputed_velocity
     save_path = args.save_path
     
     all_input_segments = []
@@ -70,7 +76,7 @@ if __name__ == "__main__":
         if filename.endswith('.csv') or filename.endswith('.txt'):
             file_path = os.path.join(dir_path, filename)
             df = read_trajectory(file_path)
-            input_segments, output_segments, knots_input, coeffs_input, knots_output, coeffs_output = process_trajectory(df, inp_seg_len, out_seg_len, compute_velocity)
+            input_segments, output_segments, knots_input, coeffs_input, knots_output, coeffs_output = process_trajectory(df, inp_seg_len, out_seg_len, compute_velocity, precomputed_velocity)
             
             all_input_segments.append(input_segments)
             all_output_segments.append(output_segments)

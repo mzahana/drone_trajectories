@@ -37,28 +37,32 @@ import matplotlib.pyplot as plt
 def process_file(filename, pos_mean, pos_L, vel_mean, vel_L, pos_dir, vel_dir):
     df = pd.read_csv(filename)
 
-    # Calculate differences for velocities and handle NaN values
+    # Calculate differences for velocities and velocity magnitudes
     df['vx'] = df['tx'].diff() / df['timestamp'].diff()
     df['vy'] = df['ty'].diff() / df['timestamp'].diff()
     df['vz'] = df['tz'].diff() / df['timestamp'].diff()
     df['vel_magnitude'] = np.sqrt(df['vx']**2 + df['vy']**2 + df['vz']**2)
-    df.dropna(subset=['vx', 'vy', 'vz', 'vel_magnitude'], inplace=True)
+
+    # Drop the first row for velocity data
+    df_vel = df.drop(0).reset_index(drop=True)
 
     # Whitening transformations for positions
     pos_data = df[['tx', 'ty', 'tz']].values
     pos_centered = pos_data - pos_mean
     transformed_pos = np.dot(pos_L, pos_centered.T).T
     df_transformed_pos = pd.DataFrame(transformed_pos, columns=['tx', 'ty', 'tz'])
+    df_transformed_pos.insert(0, 'timestamp', df['timestamp'])  # Insert timestamp as the first column
 
     # Whitening transformations for velocities
-    vel_data = df[['vx', 'vy', 'vz']].values
+    vel_data = df_vel[['vx', 'vy', 'vz']].values
     vel_centered = vel_data - vel_mean
     transformed_vel = np.dot(vel_L, vel_centered.T).T
     df_transformed_vel = pd.DataFrame(transformed_vel, columns=['vx', 'vy', 'vz'])
+    df_transformed_vel.insert(0, 'timestamp', df_vel['timestamp'])  # Insert adjusted timestamp for velocity
 
     # Save the transformed data
-    transformed_pos_filename = os.path.join(pos_dir, 'transformed_' + os.path.basename(filename))
-    transformed_vel_filename = os.path.join(vel_dir, 'transformed_' + os.path.basename(filename))
+    transformed_pos_filename = os.path.join(pos_dir, 'normalized_' + os.path.basename(filename))
+    transformed_vel_filename = os.path.join(vel_dir, 'normalized_vel_' + os.path.basename(filename))
     df_transformed_pos.to_csv(transformed_pos_filename, index=False)
     df_transformed_vel.to_csv(transformed_vel_filename, index=False)
 
@@ -98,9 +102,16 @@ def compute_stats_and_transform(directory):
     # Compute statistics and Cholesky decomposition
     pos_stats, vel_stats = compute_stats(combined_pos_df, combined_vel_df, max_pos_length, max_vel_magnitude)
 
-    # Save the statistics
-    pos_stats_file = 'pos_stats.npz'
-    vel_stats_file = 'vel_stats.npz'
+    # Create directories for transformed data and determine the parent directory
+    parent_dir = os.path.dirname(directory)
+    transformed_pos_dir = os.path.join(parent_dir, 'transformed_position_data')
+    transformed_vel_dir = os.path.join(parent_dir, 'transformed_velocity_data')
+    os.makedirs(transformed_pos_dir, exist_ok=True)
+    os.makedirs(transformed_vel_dir, exist_ok=True)
+
+    # Save the statistics in the parent directory
+    pos_stats_file = os.path.join(parent_dir, 'pos_stats.npz')
+    vel_stats_file = os.path.join(parent_dir, 'vel_stats.npz')
     np.savez(pos_stats_file, **pos_stats)
     np.savez(vel_stats_file, **vel_stats)
 
@@ -121,6 +132,12 @@ def compute_stats_and_transform(directory):
 
     # Plot histograms of the original and velocity magnitude data
     plot_histograms(combined_pos_df, combined_vel_df, combined_vel_magnitude_df)
+
+    # Print the paths to the saved npz files and the transformed directories
+    print(f"\npos_stats.npz saved at: {pos_stats_file}")
+    print(f"vel_stats.npz saved at: {vel_stats_file}")
+    print(f"Transformed position data directory: {transformed_pos_dir}")
+    print(f"Transformed velocity data directory: {transformed_vel_dir}")
 
 def compute_stats(pos_df, vel_df, max_pos_length, max_vel_magnitude):
     pos_stats = {

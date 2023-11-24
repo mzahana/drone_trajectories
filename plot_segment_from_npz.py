@@ -11,6 +11,7 @@ def plot_trajectory_segment(npz_filename, segment_index):
     output_segments = data['output_segments']  # assuming the output segments are stored under the key 'outputs'
 
     print(f"Shape of input data: {input_segments.shape}")
+    print(f"Shape of output data: {output_segments.shape}")
 
     # Extract the specific segment pair
     input_segment = input_segments[:, :, segment_index]
@@ -21,10 +22,12 @@ def plot_trajectory_segment(npz_filename, segment_index):
     ax = fig.add_subplot(111, projection='3d')
 
     # Plot input segment
-    ax.plot(input_segment[0, :], input_segment[1, :], input_segment[2, :], label='Input Segment')
+    # ax.plot(input_segment[0, :], input_segment[1, :], input_segment[2, :], label='Input Segment')
+    ax.scatter(input_segment[0, :], input_segment[1, :], input_segment[2, :], c='g', marker='o', label='Input Segment')
 
     # Plot output segment, assuming it should be plotted separately
-    ax.plot(output_segment[0, :], output_segment[1, :], output_segment[2, :], label='Output Segment')
+    # ax.plot(output_segment[0, :], output_segment[1, :], output_segment[2, :], label='Output Segment')
+    ax.scatter(output_segment[0, :], output_segment[1, :], output_segment[2, :], c='r', marker='x', label='Output Segment')
 
     # Labels and legend
     ax.set_xlabel('X')

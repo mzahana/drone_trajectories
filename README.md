@@ -181,6 +181,38 @@ python plot_trajectory.py <trajectory_file> [--plot_velocity]
 - `trajectory_file`: Path to the CSV or TXT file containing the drone position trajectory.
 - `--plot_velocity`: Optional flag to plot velocity vectors.
 
+## 6. `compute_stats.py`
+
+Script for Computing Position and Velocity Statistics from Trajectory Data.
+
+This script reads trajectory data in CSV or TXT format from a specified directory.
+Each file should contain timestamp, tx, ty, and tz columns, representing time and
+3D position data. The script computes the mean and standard deviation of positions (tx, ty, tz),
+calculates the velocity components (vx, vy, vz) and their magnitudes, and then computes
+the mean and standard deviation of the velocity magnitudes.
+
+Additionally, it computes and prints the maximum length of all position vectors and
+the maximum velocity magnitudes from all trajectory files. These values are also saved
+in the respective .npz files.
+
+The script also computes, saves, and prints the covariance matrices and their inverses
+for both position and velocity datasets, and performs a whitening transformation on the data.
+
+The results, including position and velocity statistics and covariance matrices, are saved 
+in two .npz files: `pos_stats.npz` and `vel_stats.npz`. It also generates histograms for the positions 
+and velocity magnitudes.
+
+The script also normalizes the original trajectories (using max norm, and whitening) and saves the normalized trajectories in CSV/TXT files in the parent directory of the provided path. These normalized trajectories can then be processed by `process_multiple_trajectories.py` to generate normalized position and velocity datasets for direct training.
+
+### Usage:
+    python compute_stats.py <directory_path>
+
+Example:
+    python compute_stats.py /path/to/directory
+
+Where '/path/to/directory' is the path to the directory containing your CSV/TXT files.
+
+
 
 # Ignored Files and Directories
 

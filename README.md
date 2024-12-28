@@ -1,10 +1,34 @@
-# Drone Trajectory Processing and Visualization
+# Drone Trajectories: Processing and Visualization
 
-This repository contains a collection of Python scripts for processing and visualizing drone trajectories. The scripts perform various operations such as segmenting trajectories into input and output segments, resampling trajectories, and plotting them. This is useful for training models for trajectory prediction in 3D.
+This repository contains a collection of Python scripts for processing and visualizing drone trajectories saved `.csv` files. The included scripts perform various operations such as segmenting trajectories into input and output sequences, resampling trajectories, and plotting them. This is useful for training models for trajectory prediction in 3D, for example using our VECTOR framework [https://doi.org/10.3390/drones9010008].
 
 ![traj1](resources/Figure_1.png)
 ![traj2](resources/Figure_2.png)
 
+# Citation
+This repositoy is a supporting package to our published work:
+
+**VECTOR: Velocity-Enhanced GRU Neural Network for Real-Time 3D UAV Trajectory Prediction**
+
+If you find this repo useful, kindly give it a STAR :)
+
+If you use this repo in your academic work, kindly cite our publication:
+```
+
+@Article{drones9010008,
+AUTHOR = {Nacar, Omer and Abdelkader, Mohamed and Ghouti, Lahouari and Gabr, Kahled and Al-Batati, Abdulrahman and Koubaa, Anis},
+TITLE = {VECTOR: Velocity-Enhanced GRU Neural Network for Real-Time 3D UAV Trajectory Prediction},
+JOURNAL = {Drones},
+VOLUME = {9},
+YEAR = {2025},
+NUMBER = {1},
+ARTICLE-NUMBER = {8},
+URL = {https://www.mdpi.com/2504-446X/9/1/8},
+ISSN = {2504-446X},
+ABSTRACT = {This paper addresses the challenge of predicting 3D trajectories for Unmanned Aerial Vehicles (UAVs) in real-time, a critical task for applications like aerial surveillance and defense. Current prediction models primarily leverage only position data, which may not provide the most accurate forecasts for UAV movements and usually fail outside the position domain used in the training phase. Our research identifies a gap in utilizing velocity estimates and first-order dynamics to better capture the dynamics and enhance prediction accuracy and generalizability in any position domain. To bridge this gap, we introduce a trajectory prediction scheme using sequence-based neural networks with Gated Recurrent Units (GRUs) to forecast future velocity and positions based on historical velocity estimates instead of position measurements. This approach is designed to improve the predictive capabilities over traditional methods that rely solely on recurrent neural networks (RNNs) or transformers, which can struggle with scalability in this context. Our methodology employs both synthetic and real-world 3D UAV trajectory data, incorporating diverse patterns of agility, curvature, and speed. Synthetic data are generated using the Gazebo robotics simulator and PX4 Autopilot, while real-world data are sourced from the UZH-FPV and Mid-Air drone racing datasets. We train the GRU-based models on drone 3D position and velocity samples to capture the dynamics of UAV movements effectively. Quantitatively, the proposed GRU-based prediction algorithm demonstrates superior performance, achieving a mean square error (MSE) ranging from 2×10−8 to 2×10−7. This performance outstrips existing state-of-the-art RNN models. Overall, our findings confirm the effectiveness of incorporating velocity data in improving the accuracy of UAV trajectory predictions across both synthetic and real-world scenarios, in and out of position data distributions. Finally, we open-source our 5000 trajectories dataset and a ROS2 package to facilitate the integration with existing ROS-based UAV systems.},
+DOI = {10.3390/drones9010008}
+}
+```
 
 # Installation
 
